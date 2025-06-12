@@ -3,6 +3,10 @@ let currentStripe = 0;      // Index of the current stripe being animated
 let mode = 1;               // Drawing mode: 0 = cross pattern, 1 = parallel lines
 let index = 0;              // Index to track drawing progress within a stripe
 
+let mic;                    // Microphone input
+let micLevel;               // Level from the microphone
+
+
 function setup() {
   let cnv = createCanvas(windowWidth, windowHeight); // Create canvas the size of the window
   angleMode(DEGREES);                                // Use degrees for angle calculations
@@ -33,10 +37,16 @@ function setup() {
       random(0.1, 1)                                                // stroke weight
     ));
   }
+  
+  mic = new p5.AudioIn();
+  mic.start();
 }
 
 function draw() {
   translate(width / 2, height / 2); // Center the coordinate system
+  
+  // Calculate opacity based on mic input
+  opacity = map(mic.getLevel(),0,0.2,30,230);
   
   // Animate one stripe at a time
   if (currentStripe < stripes.length) {
@@ -143,16 +153,14 @@ class LineStripe {
     rotate(-this.angle);
 
     let l = this.lines[index];
-    
-    
-   let volume = random(0.2);
-    //let volume = 0.2 * sin(10* millis());
-    
-    let opacity = random(255);
+      
     
     noStroke();
-    fill(this.gray, 100);
-    ellipse(this.currentLen + index * 10, index * 10, 50 * volume, 50 * volume);
+    fill(this.gray, opacity);
+    
+    // Calculate point size based on mic input
+    let volume = mic.getLevel();
+    ellipse(this.currentLen + index * 10, index * 10, 60 * volume, 60 * volume);
     
     // Animate the line growing until it reaches target length
     if (this.currentLen < this.len) {
