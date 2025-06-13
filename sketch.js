@@ -75,15 +75,15 @@ function draw() {
     let spectrum = fft.analyze();
     noStroke();
     fill(255, 0, 255);
-    let maxF = 0;
-    let maxV = 0;
+    let maxF = 0; // Find the frequency with the maximum amplitude
+    let maxV = 0; // Initialize max value
     for (let i = 0; i< spectrum.length; i++){
       if(maxV < spectrum[i]){
         maxV = spectrum[i];
         maxF = i;
       }
     }
-    opacity = map(maxF,0,50,30,230);
+    opacity = map(maxF,0,50,30,230);  // Map frequency index to opacity
   } else {
     opacity = map(mic.getLevel(),0,0.2,0,230);
   }
@@ -109,8 +109,8 @@ function drawModeButton() {
   push();
   resetMatrix(); // Reset transform so button is drawn in screen coords
   let margin = 0.025 * min(width, height); 
-  let btnW = 0.25 * width;   
-  let btnH = 0.06 * height;  
+  let btnW = 0.25 * width;  // Button width based on canvas size 
+  let btnH = 0.06 * height;  // Button height based on canvas size
   let x = margin;
   let y = height - btnH - margin;
 
@@ -136,10 +136,10 @@ function drawSoundButton() {
   push();
   resetMatrix();
   let margin = 0.025 * min(width, height); 
-  let btnW = 0.25 * width;   
-  let btnH = 0.06 * height;  
-  let x = margin + 0.3 * width;
-  let y = height - btnH - margin;
+  let btnW = 0.25 * width;    // Button width based on canvas size
+  let btnH = 0.06 * height;  // Button height based on canvas size
+  let x = margin + 0.3 * width; // Position next to the mode button
+  let y = height - btnH - margin; // Same vertical position as mode button
 
   fill(255, 230, 180, 220);
   stroke(120);
