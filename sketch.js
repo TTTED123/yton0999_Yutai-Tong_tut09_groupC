@@ -1,11 +1,22 @@
 let stripes = [];           // Array to store all LineStripe objects
 let currentStripe = 0;      // Index of the current stripe being animated
+
 let mode = 1;               // Drawing mode: 0 = cross pattern, 1 = parallel lines
+let soundMode = 0;          // Sound mode: 0 = sound1, 1 = sound2, 3 = microphone input
+
+let mic;                    // Microphone input (if used)
+let micLevel;               // Level from the microphone
 let index = 0;              // Index to track drawing progress within a stripe
 
-let mic;                    // Microphone input
-let micLevel;               // Level from the microphone
+let opacity;               // Opacity of lines, based on sound/mic input
+let soundLevel;
+let amplitude;             // Amplitude analyzer for audio input
 
+function preload() {
+  // Preload two audio files before the sketch starts
+  sound1 = loadSound('sound1.m4a');
+  sound2 = loadSound('sound2.m4a');
+}
 
 function setup() {
   let cnv = createCanvas(windowWidth, windowHeight); // Create canvas the size of the window
@@ -37,16 +48,45 @@ function setup() {
       random(0.1, 1)                                                // stroke weight
     ));
   }
-  
-  mic = new p5.AudioIn();
-  mic.start();
+
+  // Initialize audio input depending on soundMode
+  if(soundMode == 0){
+    amplitude = new p5.Amplitude();
+    sound1.play();
+    amplitude.setInput(sound1);
+    fft = new p5.FFT();
+  } else if(soundMode == 1){
+    amplitude = new p5.Amplitude();
+    sound2.play();
+    amplitude.setInput(sound2);
+    fft = new p5.FFT();
+  } else if(soundMode == 3){
+    mic = new p5.AudioIn();
+    mic.start();
+    fft = new p5.FFT();
+  }
 }
 
 function draw() {
   translate(width / 2, height / 2); // Center the coordinate system
-  
-  // Calculate opacity based on mic input
-  opacity = map(mic.getLevel(),0,0.2,30,230);
+
+  // Calculate opacity based on sound or mic input
+  if(soundMode != 3){
+    let spectrum = fft.analyze();
+    noStroke();
+    fill(255, 0, 255);
+    let maxF = 0;
+    let maxV = 0;
+    for (let i = 0; i< spectrum.length; i++){
+      if(maxV < spectrum[i]){
+        maxV = spectrum[i];
+        maxF = i;
+      }
+    }
+    opacity = map(maxF,0,50,30,230);
+  } else {
+    opacity = map(mic.getLevel(),0,0.2,0,230);
+  }
   
   // Animate one stripe at a time
   if (currentStripe < stripes.length) {
@@ -59,6 +99,9 @@ function draw() {
   }
 
   drawModeButton();  // Draw toggle button for drawing mode
+  if(soundMode != 3){
+    drawSoundButton(); // Draw toggle button for sound mode
+  }
 }
 
 // Draw button to switch drawing mode
@@ -88,6 +131,32 @@ function drawModeButton() {
   pop();
 }
 
+// Draw button to switch sound modes
+function drawSoundButton() {
+  push();
+  resetMatrix();
+  let margin = 0.025 * min(width, height); 
+  let btnW = 0.25 * width;   
+  let btnH = 0.06 * height;  
+  let x = margin + 0.3 * width;
+  let y = height - btnH - margin;
+
+  fill(255, 230, 180, 220);
+  stroke(120);
+  strokeWeight(2);
+  rect(x, y, btnW, btnH, 12);
+
+  fill(60);
+  noStroke();
+  textSize(btnH * 0.45);
+  textAlign(CENTER, CENTER);
+  text(
+    soundMode === 0 ? "Switch to sound2" : "Switch to sound1",
+    x + btnW / 2,
+    y + btnH / 2
+  );
+  pop();
+}
 
 // Handle mouse press to toggle mode/sound mode
 function mousePressed() {
@@ -110,6 +179,19 @@ function mousePressed() {
     loop();
   }
   
+  // Check if sound button clicked
+  x = margin + 0.3 * width;
+  if (mouseX >= x && mouseX <= x + btnW &&
+      mouseY >= y && mouseY <= y + btnH) {
+    soundMode = soundMode === 1 ? 0 : 1;
+    sound1.stop();
+    sound2.stop();
+    stripes = [];
+    currentStripe = 0;
+    loop();
+    setup();
+    loop();
+  }
 }
 
 // Resize canvas and regenerate when window size changes
@@ -153,14 +235,18 @@ class LineStripe {
     rotate(-this.angle);
 
     let l = this.lines[index];
-      
-    
-    noStroke();
+    stroke(this.gray, opacity);
     fill(this.gray, opacity);
     
-    // Calculate point size based on mic input
-    let volume = mic.getLevel();
-    ellipse(this.currentLen + index * 10, index * 10, 60 * volume, 60 * volume);
+    let volume;
+    if (soundMode == 3) {
+      volume = mic.getLevel();
+      ellipse(this.currentLen + index * 10, index * 10, 60 * volume, 60 * volume);
+    } else {
+      volume = amplitude.getLevel();
+      noStroke();
+      ellipse(this.currentLen + index * 10, index * 10, 50 * volume, 50 * volume);
+    }
     
     // Animate the line growing until it reaches target length
     if (this.currentLen < this.len) {
